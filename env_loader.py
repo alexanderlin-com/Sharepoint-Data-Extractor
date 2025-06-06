@@ -1,6 +1,6 @@
 import os
 
-def load_credentials(file_path="credentials.txt", env_path=".env"):
+def load_credentials(file_path, env_path=".env"):
     if not os.path.exists(file_path):
         print(f"❌ Credentials file not found: {file_path}")
         return False
@@ -25,5 +25,5 @@ def load_credentials(file_path="credentials.txt", env_path=".env"):
     with open(env_path, "w", encoding="utf-8") as env_file:
         env_file.write("\n".join(env_lines) + "\n")
 
-    print(f"✅ .env file updated with credentials.")
+    print(f"✅ .env file written to: {env_path}")
     return True

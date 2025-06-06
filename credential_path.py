@@ -1,5 +1,6 @@
 import os
 import platform
+from tkinter import filedialog
 
 def get_secure_credentials_path():
     """
@@ -31,3 +32,13 @@ def read_credentials_path():
     if not os.path.isfile(path):
         raise FileNotFoundError(f"credentials.txt not found at: {path}")
     return path
+
+def prompt_user_for_credentials():
+    """
+    Opens a file dialog for the user to manually select a credentials.txt file.
+    Returns the path if selected, else None.
+    """
+    return filedialog.askopenfilename(
+        title="Select credentials.txt",
+        filetypes=[("Text Files", "*.txt")]
+    )

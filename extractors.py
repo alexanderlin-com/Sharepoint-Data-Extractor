@@ -1,7 +1,6 @@
-# extractors.py
-
 import os
 import requests
+import csv
 from dotenv import load_dotenv
 from msal import ConfidentialClientApplication
 
@@ -12,7 +11,7 @@ def extract_data(site_id: str):
 
     list_name = os.getenv("SHAREPOINT_LIST_NAME")
     field_string = os.getenv("SHAREPOINT_LIST_FIELDS", "")
-    output_file = os.getenv("OUTPUT_FILENAME", "output.txt")
+    output_file = os.getenv("OUTPUT_FILENAME", "output.csv")
 
     if not list_name or not field_string:
         print("❌ List name or fields missing in .env")
@@ -35,15 +34,15 @@ def extract_data(site_id: str):
         print("❌ No list items found.")
         return
 
-    output_lines = build_output_lines(items, fields_to_extract)
+    output_rows = build_output_rows(items, fields_to_extract)
 
-    with open(output_file, "w", encoding="utf-8") as f:
-        for line in output_lines:
-            f.write(line + "\n")
+    with open(output_file, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(fields_to_extract)
+        writer.writerows(output_rows)
 
     print(f"📄 Output written to {output_file}")
     print("✅ Data extraction complete.")
-
 
 def authenticate():
     client_id = os.getenv("CLIENT_ID")
@@ -62,7 +61,6 @@ def authenticate():
     token_response = app.acquire_token_for_client(scopes=scope)
     return token_response.get("access_token")
 
-
 def get_list_id(site_id, list_name, token):
     url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_name}"
     headers = { "Authorization": f"Bearer {token}" }
@@ -73,7 +71,6 @@ def get_list_id(site_id, list_name, token):
         return None
 
     return resp.json().get("id")
-
 
 def get_list_items(site_id, list_id, token):
     url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items?expand=fields"
@@ -86,10 +83,9 @@ def get_list_items(site_id, list_id, token):
 
     return resp.json().get("value", [])
 
-
-def build_output_lines(items, fields_to_extract):
+def build_output_rows(items, fields_to_extract):
     seen = set()
-    lines = []
+    rows = []
 
     for item in items:
         fields = item["fields"]
@@ -99,19 +95,12 @@ def build_output_lines(items, fields_to_extract):
             value = fields.get(field, "").strip()
             extracted_values.append(value)
 
-        # Handle comma-separated values (e.g. "Alice, Bob")
-        exploded = [
-            val.split(",") if "," in val else [val]
-            for val in extracted_values
-        ]
+        exploded = [val.split(",") if "," in val else [val] for val in extracted_values]
 
-        # Zip through all combinations
         for row in zip(*exploded):
             clean_row = tuple(col.strip() for col in row)
             if clean_row not in seen:
-                # Format each column with left-aligned padding (optional tweakable width)
-                formatted = "".join(f"{col:<20}" for col in clean_row)
-                lines.append(formatted)
+                rows.append(clean_row)
                 seen.add(clean_row)
 
-    return lines
+    return rows
